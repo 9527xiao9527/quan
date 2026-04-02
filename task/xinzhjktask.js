@@ -1,3 +1,4 @@
+
 let data = $prefs.valueForKey("xinzhjk_info")
 
 if(!data){
@@ -29,11 +30,17 @@ headers:headers
 
 let json = JSON.parse(info.body)
 
+console.log("完整响应:", JSON.stringify(json))
+
 let activity_id = json.data.activity_info.id
 let store_id = json.data.user.store_id
 
 let currentPlay = Number(json.data.playTimeNumber || 0)
-let targetTime = Number(json.data.activity_info.dati_time || 0)
+let video_time = Number(json.data.activity_info.video_time || 0)
+// video_time 单位是分钟，转换成秒
+let targetTime = video_time > 0 ? video_time * 60 : Number(json.data.activity_info.dati_time || 0)
+
+console.log(`视频时长: ${video_time} 分钟 = ${targetTime} 秒`)
 
 console.log(`activity: ${activity_id}`)
 console.log(`store: ${store_id}`)
@@ -59,20 +66,23 @@ console.log(`模拟播放次数: ${playTimes}`)
 let total_play_time = currentPlay
 
 // start
-await playlog("startPlay",240,total_play_time)
+await playlog("startPlay",0,total_play_time)
 
 // 模拟播放
 for(let i=0;i<playTimes;i++){
 
 await sleep(random(3000,5000))
 
+let prev = total_play_time
 total_play_time += 240
 
 if(total_play_time > targetTime){
 total_play_time = targetTime
 }
 
-await playlog("timer",240,total_play_time)
+let increment = total_play_time - prev
+
+await playlog("timer",increment,total_play_time)
 
 console.log(`播放: ${total_play_time}`)
 

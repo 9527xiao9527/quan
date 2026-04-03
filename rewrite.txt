@@ -1,4 +1,5 @@
-﻿^https:\/\/live-play\.njyqkj0ksyz\.com\/api\/topic\/topic_config url script-request-header https://raw.githubusercontent.com/9527xiao9527/quan/main/rewrite/vzanck.js
+^https://lbxapi\.myzxyx\.com/consumer/course-video/detail url script-request-header https://raw.githubusercontent.com/9527xiao9527/quan/refs/heads/main/rewrite/xinlebock.js
+^https:\/\/live-play\.njyqkj0ksyz\.com\/api\/topic\/topic_config url script-request-header https://raw.githubusercontent.com/9527xiao9527/quan/main/rewrite/vzanck.js
 https://api.qianguolive.cn/qg/app/topic/getTopicInfo url script-request-header https://raw.githubusercontent.com/9527xiao9527/quan/main/rewrite/qg1.js
 https://api.qianguolive.cn/qg/app/topic/viewDuration url script-request-body https://raw.githubusercontent.com/9527xiao9527/quan/main/rewrite/qg2.js
 https://yujianyunbo.com/prod-api/api/wechat/member/getObtainRedEnvelopeNew url script-request-body https://raw.githubusercontent.com/9527xiao9527/quan/main/rewrite/yuanjianyunbotime.js

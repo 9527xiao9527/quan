@@ -14,9 +14,12 @@ if (!body.includes("openid") || !body.includes("zb_id")) {
 
 function extract(str, key) {
   // 匹配 let key = 'value' 或 let key = "value" 或 let key = value（数字）
+  // 同时去掉行尾的 // 注释
   const re = new RegExp(`let\\s+${key}\\s*=\\s*['"]?([^'";\\n]+)['"]?`);
   const m = str.match(re);
-  return m ? m[1].trim().replace(/^['"]|['"]$/g, "") : null;
+  if (!m) return null;
+  // 去掉注释部分：取 // 之前的内容，再去掉引号和空格
+  return m[1].replace(/\s*\/\/.*$/, "").trim().replace(/^['"]|['"]$/g, "");
 }
 
 const openid     = extract(body, "openid");

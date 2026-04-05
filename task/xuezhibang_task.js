@@ -5,7 +5,7 @@
 
 const BASE = "https://m.xuezhibang.com";
 
-const raw = $persistentStore.read("xuezhibang_params");
+const raw = $prefs.valueForKey("xuezhibang_params");
 if (!raw) {
   $notification.post("学知帮答题", "❌ 未找到参数", "请先打开课程页面触发重写脚本");
   $done();

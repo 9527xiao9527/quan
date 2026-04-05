@@ -1,13 +1,13 @@
 // xuezhibang_task.js
 // Task 脚本：读取存储的参数，提交答题 + 领红包
 // Quantumult X task 配置（手动触发）：
-// event-interaction https://raw.githubusercontent.com/9527xiao9527/quan/refs/heads/main/task/xuezhibang_task.js, tag=学知帮答题, img-url=checkmark.seal.fill@sys, enabled=true
+// event-interaction https://raw.githubusercontent.com/xxx/xuezhibang_task.js, tag=学知帮答题, img-url=checkmark.seal.fill@sys, enabled=true
 
 const BASE = "https://m.xuezhibang.com";
 
 const raw = $prefs.valueForKey("xuezhibang_params");
 if (!raw) {
-  $notification.post("学知帮答题", "❌ 未找到参数", "请先打开课程页面触发重写脚本");
+  $notify("学知帮答题", "❌ 未找到参数", "请先打开课程页面触发重写脚本");
   $done();
   return;
 }
@@ -16,7 +16,7 @@ let p;
 try {
   p = JSON.parse(raw);
 } catch (e) {
-  $notification.post("学知帮答题", "❌ 参数解析失败", e.message);
+  $notify("学知帮答题", "❌ 参数解析失败", e.message);
   $done();
   return;
 }
@@ -54,7 +54,7 @@ $task.fetch({
   } catch (_) {}
 
   if (!datiOk) {
-    $notification.post("学知帮答题", "⚠️ 答题提交异常", resp.body.slice(0, 100));
+    $notify("学知帮答题", "⚠️ 答题提交异常", resp.body.slice(0, 100));
     $done();
     return;
   }
@@ -78,18 +78,18 @@ $task.fetch({
       }
     } catch (_) {}
 
-    $notification.post(
+    $notify(
       "学知帮答题 ✅",
       `答题成功 | ${hbResult}`,
       `课程 ${zb_id} | 选项 ${answerIndex}`
     );
     $done();
   }).catch(e => {
-    $notification.post("学知帮答题", "✅ 答题成功", `红包请求失败: ${e}`);
+    $notify("学知帮答题", "✅ 答题成功", `红包请求失败: ${e}`);
     $done();
   });
 
 }).catch(e => {
-  $notification.post("学知帮答题", "❌ 请求失败", String(e));
+  $notify("学知帮答题", "❌ 请求失败", String(e));
   $done();
 });

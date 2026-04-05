@@ -1,7 +1,7 @@
 // xuezhibang_capture.js
 // 重写脚本：拦截 conten.php 响应，解析参数存储
 // Quantumult X rewrite 配置：
-// ^https?://m\.xuezhibang\.com/app/conten\.php url script-response-body xuezhibang_capture.js
+// ^https?://m\.xuezhibang\.com/app/conten\.php url script-response-body https://raw.githubusercontent.com/9527xiao9527/quan/refs/heads/main/rewrite/xuezhibang.js
 
 const url = $request.url;
 const body = $response.body || "";

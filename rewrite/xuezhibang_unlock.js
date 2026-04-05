@@ -1,52 +1,81 @@
 // xuezhibang_unlock.js
-// 重写脚本：注入 JS 到课程页面，强制解锁答题按钮
-// Quantumult X rewrite 配置：
-// ^https?://m\.xuezhibang\.com/app/conten\.php url script-response-body https://raw.githubusercontent.com/9527xiao9527/quan/refs/heads/main/rewrite/xuezhibang_unlock.js
+// 注入 JS：发真实 WebSocket pong 让服务端记录，同时解锁前端答题按钮
+// ^https?://m\.xuezhibang\.com/app/conten\.php url script-response-body xuezhibang_unlock.js
 
 const body = $response.body || "";
 
-// 只处理包含答题逻辑的最终页面
 if (!body.includes("fnBeginExam") || !body.includes("storageID")) {
   $done({});
   return;
 }
 
-// 提取 storageID 的值（如 f8fa205584）
-const sidMatch = body.match(/let\s+storageID\s*=\s*['"]([^'"]+)['"]/);
-const storageID = sidMatch ? sidMatch[1] : null;
-
-// 注入脚本：设置 localStorage 并在页面加载完后调用 fnBeginExam
 const inject = `
 <script>
 (function(){
-  var sid = ${storageID ? `"${storageID}"` : 'null'};
-  if(sid){
-    // 写入足够的 pong 心跳次数
-    localStorage.setItem(sid + '-pong', '99');
-    // 写入最大播放进度（视频总时长，单位秒，设一个足够大的值）
-    var dur = (typeof videoDuration !== 'undefined') ? videoDuration/1000 : 99999;
-    localStorage.setItem(sid + '-max', dur);
-    localStorage.setItem(sid, dur);
-  }
-  // 等页面 JS 全部加载完再调用解锁函数
+  // 等页面原始变量初始化完毕再执行
   window.addEventListener('load', function(){
     setTimeout(function(){
-      if(typeof fnBeginExam === 'function'){
-        fnBeginExam();
-        console.log('[unlock] fnBeginExam called');
+
+      var sid = (typeof storageID !== 'undefined') ? storageID : null;
+      var dur = (typeof videoDuration !== 'undefined') ? videoDuration / 1000 : 99999;
+
+      // 1. 写 localStorage，解锁前端判断
+      if(sid){
+        localStorage.setItem(sid + '-pong', '99');
+        localStorage.setItem(sid + '-max', dur);
+        localStorage.setItem(sid, dur);
       }
-      // 同时直接操作 DOM 解锁按钮
-      var btn = document.getElementById('comfirm');
-      if(btn){ btn.classList.remove('lock'); }
-      var tips = document.querySelector('.dt_tips');
-      if(tips){ tips.style.display = 'none'; }
-    }, 1500);
+
+      // 2. 发真实 WebSocket pong，让服务端记录
+      function sendPongs(count, interval) {
+        var _ws = new WebSocket("wss://lts.qihuangxueshe.cn/wss");
+        _ws.onopen = function(){
+          // 先登录
+          _ws.send(JSON.stringify({
+            type: 'login', leixing: 'ky',
+            openid: openid, nickname: nickname,
+            headerimg: headerimg, zb_id: zb_id, kb_id: kb_id
+          }));
+          // 延迟后连续发 pong
+          var sent = 0;
+          var t = setInterval(function(){
+            _ws.send(JSON.stringify({
+              type: 'pong', leixing: 'ky',
+              openid: openid, zb_id: zb_id,
+              kb_id: kb_id, sfzb: 2
+            }));
+            sent++;
+            console.log('[unlock] pong ' + sent + '/' + count);
+            if(sent >= count){
+              clearInterval(t);
+              _ws.close();
+              // 3. pong 发完后解锁答题
+              unlockExam();
+            }
+          }, interval);
+        };
+        _ws.onerror = function(e){
+          console.log('[unlock] ws error, fallback unlock');
+          unlockExam();
+        };
+      }
+
+      function unlockExam(){
+        if(typeof fnBeginExam === 'function') fnBeginExam();
+        var btn = document.getElementById('comfirm');
+        if(btn) btn.classList.remove('lock');
+        var tips = document.querySelector('.dt_tips');
+        if(tips) tips.style.display = 'none';
+        console.log('[unlock] exam unlocked');
+      }
+
+      // 发 5 次 pong，每次间隔 1s
+      sendPongs(5, 1000);
+
+    }, 1000);
   });
 })();
 </script>
 `;
 
-// 注入到 </body> 前
-const newBody = body.replace("</body>", inject + "</body>");
-
-$done({ body: newBody });
+$done({ body: body.replace("</body>", inject + "</body>") });

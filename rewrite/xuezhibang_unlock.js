@@ -1,7 +1,7 @@
 // xuezhibang_unlock.js
 // 重写脚本：注入 JS 到课程页面，强制解锁答题按钮
 // Quantumult X rewrite 配置：
-// ^https?://m\.xuezhibang\.com/app/conten\.php url script-response-body xuezhibang_unlock.js
+// ^https?://m\.xuezhibang\.com/app/conten\.php url script-response-body https://raw.githubusercontent.com/9527xiao9527/quan/refs/heads/main/rewrite/xuezhibang_unlock.js
 
 const body = $response.body || "";
 

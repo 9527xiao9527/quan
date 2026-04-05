@@ -1,7 +1,7 @@
 // xuezhibang_task.js
 // Task 脚本：读取存储的参数，提交答题 + 领红包
 // Quantumult X task 配置（手动触发）：
-// event-interaction https://raw.githubusercontent.com/xxx/xuezhibang_task.js, tag=学知帮答题, img-url=checkmark.seal.fill@sys, enabled=true
+// event-interaction https://raw.githubusercontent.com/9527xiao9527/quan/refs/heads/main/task/xuezhibang_task.js, tag=学知帮答题, img-url=checkmark.seal.fill@sys, enabled=true
 
 const BASE = "https://m.xuezhibang.com";
 

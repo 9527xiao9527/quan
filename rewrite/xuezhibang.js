@@ -1,7 +1,7 @@
 // xuezhibang_capture.js
 // 重写脚本：拦截 conten.php 响应，解析参数存储
 // Quantumult X rewrite 配置：
-// ^https?://m\.xuezhibang\.com/app/conten\.php url script-response-body https://raw.githubusercontent.com/9527xiao9527/quan/refs/heads/main/rewrite/xuezhibang.js
+// ^https?://m\.xuezhibang\.com/app/conten\.php url script-response-body xuezhibang_capture.js
 
 const url = $request.url;
 const body = $response.body || "";
@@ -44,6 +44,6 @@ const params = { openid, zb_id, kb_id, kefu_id, answerIndex, us_id, hasHongbao, 
 $prefs.setValueForKey(JSON.stringify(params), "xuezhibang_params");
 
 console.log("[xuezhibang] 参数已保存：" + JSON.stringify(params));
-$notification.post("学知帮", "参数已捕获", `课程 ${zb_id} | 答案选项 ${answerIndex}`);
+$notify("学知帮", "参数已捕获", `课程 ${zb_id} | 答案选项 ${answerIndex}`);
 
 $done({});

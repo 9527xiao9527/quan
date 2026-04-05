@@ -46,7 +46,14 @@ if (!openid || !zb_id) {
 const params = { openid, zb_id, kb_id, kefu_id, answerIndex, us_id, hasHongbao, phpsessid, p_h5_u };
 $prefs.setValueForKey(JSON.stringify(params), "xuezhibang_params");
 
+const answerLabel = ["A", "B", "C", "D"][parseInt(answerIndex) - 1] || answerIndex;
+const hongbaoTip = hasHongbao == "1" ? "🧧 有红包" : "无红包";
+
 console.log("[xuezhibang] 参数已保存：" + JSON.stringify(params));
-$notify("学知帮", "参数已捕获", `课程 ${zb_id} | 答案选项 ${answerIndex}`);
+$notify(
+  "学知帮 · 正确答案",
+  `选项 ${answerLabel}　　${hongbaoTip}`,
+  `课程 ${zb_id} | 用户 ${us_id}`
+);
 
 $done({});

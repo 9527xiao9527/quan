@@ -41,7 +41,7 @@ if (!openid || !zb_id) {
 }
 
 const params = { openid, zb_id, kb_id, kefu_id, answerIndex, us_id, hasHongbao, phpsessid, p_h5_u };
-$persistentStore.write(JSON.stringify(params), "xuezhibang_params");
+$prefs.setValueForKey(JSON.stringify(params), "xuezhibang_params");
 
 console.log("[xuezhibang] 参数已保存：" + JSON.stringify(params));
 $notification.post("学知帮", "参数已捕获", `课程 ${zb_id} | 答案选项 ${answerIndex}`);

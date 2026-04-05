@@ -1,0 +1,49 @@
+// xuezhibang_capture.js
+// 重写脚本：拦截 conten.php 响应，解析参数存储
+// Quantumult X rewrite 配置：
+// ^https?://m\.xuezhibang\.com/app/conten\.php url script-response-body xuezhibang_capture.js
+
+const url = $request.url;
+const body = $response.body || "";
+
+// 只处理最终页面（带 y= 用户ID 的那次，非302跳转）
+if (!body.includes("openid") || !body.includes("zb_id")) {
+  $done({});
+  return;
+}
+
+function extract(str, key) {
+  // 匹配 let key = 'value' 或 let key = "value" 或 let key = value（数字）
+  const re = new RegExp(`let\\s+${key}\\s*=\\s*['"]?([^'";\\n]+)['"]?`);
+  const m = str.match(re);
+  return m ? m[1].trim().replace(/^['"]|['"]$/g, "") : null;
+}
+
+const openid     = extract(body, "openid");
+const zb_id      = extract(body, "zb_id");
+const kb_id      = extract(body, "kb_id");
+const kefu_id    = extract(body, "kefu_id");
+const answerIndex = extract(body, "answerIndex");
+const us_id      = (body.match(/ID：(\d+)/) || [])[1] || extract(body, "us_id");
+const hasHongbao = extract(body, "hasHongbao");
+
+// 从请求 Cookie 里取 PHPSESSID
+const cookie = $request.headers["Cookie"] || $request.headers["cookie"] || "";
+const sessMatch = cookie.match(/PHPSESSID=([^;]+)/);
+const phpsessid = sessMatch ? sessMatch[1] : "";
+const p_h5_match = cookie.match(/p_h5_u=([^;]+)/);
+const p_h5_u = p_h5_match ? p_h5_match[1] : "";
+
+if (!openid || !zb_id) {
+  console.log("[xuezhibang] 未能解析到关键参数，跳过");
+  $done({});
+  return;
+}
+
+const params = { openid, zb_id, kb_id, kefu_id, answerIndex, us_id, hasHongbao, phpsessid, p_h5_u };
+$persistentStore.write(JSON.stringify(params), "xuezhibang_params");
+
+console.log("[xuezhibang] 参数已保存：" + JSON.stringify(params));
+$notification.post("学知帮", "参数已捕获", `课程 ${zb_id} | 答案选项 ${answerIndex}`);
+
+$done({});

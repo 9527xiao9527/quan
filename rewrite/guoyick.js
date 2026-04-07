@@ -1,12 +1,9 @@
-
-
 /**
  * 功能：
  * 1️⃣ 拦截 class/info 接口
- * 2️⃣ 提取参数写入本地
- * 3️⃣ 同时将 info.classUser.playOver 重写为 1
- * 输出格式：
- * host=xxx#token=xxx#classId=xxx#sessionId=xxx#periodId=xxx#played=xxx#questions=xxx
+ * 2️⃣ 提取参数写入本地（保留）
+ * 3️⃣ 重写 playOver = 1
+ * 4️⃣ 通知只显示答案
  */
 
 const KEY = "xk_params";
@@ -27,7 +24,7 @@ try {
   token = $request.headers["token"] || $request.headers["Token"] || "";
 } catch (e) {}
 
-// ========== 初始化变量 ==========
+// ========== 初始化 ==========
 let classId = "";
 let sessionId = "";
 let periodId = "";
@@ -36,7 +33,7 @@ let questions = [];
 
 let bodyObj;
 
-// ========== 解析响应体 ==========
+// ========== 解析响应 ==========
 if ($response && $response.body) {
   try {
     bodyObj = JSON.parse($response.body);
@@ -48,13 +45,13 @@ if ($response && $response.body) {
       periodId = info.periodId;
       playedDuration = info.duration || 0;
 
-      // ====== 重写 playOver ======
+      // 重写播放状态
       if (info.classUser && info.classUser.playOver !== undefined) {
         info.classUser.playOver = 1;
       }
 
-      // ====== 解析题目 ======
-      (info.questions || []).forEach(q => {
+      // 解析题目答案
+      (info.questions || []).forEach((q, i) => {
         let right = (q.options || [])
           .filter(o => o.rightAnswer === 1)
           .map(o => o.option);
@@ -66,11 +63,11 @@ if ($response && $response.body) {
       });
     }
   } catch (e) {
-    console.log("❌ 解析响应失败:", e);
+    console.log("❌ 解析失败:", e);
   }
 }
 
-// ========== 组合保存内容 ==========
+// ========== 保存变量（保留） ==========
 let save =
   `host=${host}` +
   `#token=${token}` +
@@ -80,13 +77,24 @@ let save =
   `#played=${playedDuration}` +
   `#questions=${encodeURIComponent(JSON.stringify(questions))}`;
 
-// ========== 变更才保存 ==========
-if (save !== old) {
-  $prefs.setValueForKey(save, KEY);
-  $notify("guoyi已获取", "", save);
+// ========== 生成通知（只显示答案） ==========
+let answerText = "答案：\n";
+
+if (questions.length > 0) {
+  questions.forEach((q, i) => {
+    answerText += `第${i + 1}题：${q.answer.join(",")}\n`;
+  });
+} else {
+  answerText += "暂无题目";
 }
 
-// ========== 返回被修改后的响应体 ==========
+// ========== 仅变化时保存 ==========
+if (save !== old) {
+  $prefs.setValueForKey(save, KEY); // ✅ 这里仍然保存
+  $notify("guoyi已获取", "", answerText); // ✅ 这里只显示答案
+}
+
+// ========== 返回 ==========
 $done({
   body: JSON.stringify(bodyObj)
 });

@@ -21,11 +21,11 @@ function get(url) {
         .then(res => JSON.parse(res.body));
 }
 
-function post(url, body) {
+function post(url, body, extraHeaders = {}) {
     return $task.fetch({
         url,
         method: "POST",
-        headers,
+        headers: { ...headers, ...extraHeaders },
         body: JSON.stringify(body)
     }).then(res => JSON.parse(res.body));
 }
@@ -46,14 +46,6 @@ function post(url, body) {
         let shopId = data.shopId;
         let questionIds = data.questionIds;
 
-        // 通知1
-/*
-        $notify(
-            "📚 dsyx课程信息",
-            `时长: ${duration}秒`,
-            `shopId: ${shopId}`
-        );
-*/
         // 2. 播放
         await post(`${BASE}/p/course/liveCourse/saveLiveCoursePlayRecord`, {
             courseId: parseInt(courseId),
@@ -73,43 +65,57 @@ function post(url, body) {
         // 3. 查题
         if (!questionIds) {
             $notify("📭 dsyx任务完成", "", "无题目，已完成播放");
-            $done();
-            return;
+        } else {
+            let q = await get(
+                `${BASE}/p/questionBank/getQuestionBanks?shopId=${shopId}&courseId=${courseId}&fromUserId=${fromUserId}&ids=${encodeURIComponent(questionIds)}`
+            );
+
+            let banks = q.data.banks;
+
+            let answerStr = banks.map(item =>
+                `${item.questionId}:${item.qsType}:${item.qsAnswer}:${item.qsAnswer}`
+            ).join(",");
+
+            // 通知答案
+            $notify("📝 dsyx题目答案", "", answerStr);
+
+            // 提交答案
+            await post(`${BASE}/p/questionRecord/save`, {
+                courseId: parseInt(courseId),
+                fromUserId: fromUserId,
+                questionOption: answerStr,
+                isCorrect: 0,
+                shopId: shopId,
+                validTimeEnd: data.validTimeEnd
+            });
         }
 
-        let q = await get(
-            `${BASE}/p/questionBank/getQuestionBanks?shopId=${shopId}&courseId=${courseId}&fromUserId=${fromUserId}&ids=${encodeURIComponent(questionIds)}`
+        console.log("✅ 答题完成");
+
+        // ===== 4. 领取红包 =====
+        let red = await post(
+            `${BASE}/p/app/imService/transferRedEnvelope`,
+            {
+                courseId: parseInt(courseId),
+                receiveAmount: 30,
+                fromUserId: fromUserId,
+                shopId: shopId,
+                validTimeEnd: data.validTimeEnd
+            },
+            {
+                "Origin": "https://dsyx-h5.deshunnet.com",
+                "Accept": "*/*",
+                "Accept-Language": "zh-CN,zh-Hans;q=0.9"
+            }
         );
 
-        let banks = q.data.banks;
-
-        // 拼答案
-        let answerStr = banks.map(item =>
-            `${item.questionId}:${item.qsType}:${item.qsAnswer}:${item.qsAnswer}`
-        ).join(",");
-
-        // 通知答案
-        $notify(
-            "📝 dsyx题目答案",
-            "",
-            answerStr
-        );
-
-        // 4. 提交
-        await post(`${BASE}/p/questionRecord/save`, {
-            courseId: parseInt(courseId),
-            fromUserId: fromUserId,
-            questionOption: answerStr,
-            isCorrect: 0,
-            shopId: shopId,
-            validTimeEnd: data.validTimeEnd
-        });
+        console.log("🎁 红包结果：" + JSON.stringify(red));
 
         // 最终通知
         $notify(
             "🎉 dsyx任务完成",
             "",
-            `courseId: ${courseId}\n全部完成`
+            `courseId: ${courseId}\n红包结果: ${red.msg || JSON.stringify(red)}`
         );
 
     } catch (e) {

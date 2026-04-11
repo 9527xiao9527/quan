@@ -1,10 +1,5 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""
-青龙面板脚本 - ppzyck 答题
-环境变量 ppzyck: state#seeId#openId，多账号换行分隔
-逻辑：按账号顺序轮流尝试 A/B/C/D，找到正确答案后所有账号用正确答案补答
-"""
 
 import os
 import time
@@ -12,16 +7,21 @@ import threading
 import requests
 
 BASE_URL = "https://mp.qbxfu.cn"
+
 HEADERS = {
     "Accept-Encoding": "gzip,compress,br,deflate",
     "content-type": "application/json",
     "Connection": "keep-alive",
     "Referer": "https://servicewechat.com/wxea607ff94bea3279/8/page-frame.html",
     "Host": "mp.qbxfu.cn",
-    "User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 15_4_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 MicroMessenger/8.0.70(0x18004634) NetType/WIFI Language/zh_CN",
+    "User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 15_4_1 like Mac OS X)",
     "X-Fingerprint": "[object Object]"
 }
+
 OPTIONS = ["A", "B", "C", "D"]
+
+# ✅ 手动答案（填 A/B/C/D，留空则自动试错）
+answer = ""
 
 
 def parse_accounts():
@@ -31,272 +31,229 @@ def parse_accounts():
         return []
     accounts = []
     for i, line in enumerate(raw.splitlines()):
-        line = line.strip()
-        if not line:
-            continue
-        parts = line.split("#")
+        parts = line.strip().split("#")
         if len(parts) != 3:
-            print(f"⚠️  第{i+1}个账号格式错误，跳过: {line}")
+            print(f"⚠️ 格式错误: {line}")
             continue
-        state, see_id, open_id = parts
-        accounts.append({"index": i + 1, "state": state, "seeId": see_id, "openId": open_id})
+        accounts.append({
+            "index": i + 1,
+            "state": parts[0],
+            "seeId": parts[1],
+            "openId": parts[2]
+        })
     return accounts
 
 
-def get_details(account):
-    url = f"{BASE_URL}/api/live/watch/details?version=v&appVer=1.0.6"
-    body = {"openId": account["openId"], "state": account["state"], "seeId": account["seeId"]}
+def request_json(url, body):
     try:
         r = requests.post(url, headers=HEADERS, json=body, timeout=15)
-        data = r.json()
-        if data.get("code") == 200:
-            return data["data"]
-        print(f"  获取详情失败: {data}")
+        return r.json()
     except Exception as e:
-        print(f"  获取详情异常: {e}")
-    return None
+        print("请求异常:", e)
+        return {}
 
 
-def send_duration_once(account, duration):
+# 🔁 带重试的刷时长
+def send_duration(account, duration, max_retry=2):
     url = f"{BASE_URL}/api/live/watch/inspect?version=v"
-    body = {
-        "openId": account["openId"],
-        "state": account["state"],
-        "seeId": account["seeId"],
-        "duration": duration
-    }
-    try:
-        r = requests.post(url, headers=HEADERS, json=body, timeout=15)
-        data = r.json()
-        print(f"  传时间({duration}s): {data.get('msg', data)}")
-        return data.get("code") == 200
-    except Exception as e:
-        print(f"  传时间失败: {e}")
-        return False
+    body = {**account, "duration": duration}
+
+    for attempt in range(max_retry + 1):
+        try:
+            r = requests.post(url, headers=HEADERS, json=body, timeout=15)
+            data = r.json()
+
+            if data.get("code") == 200:
+                print(f"[账号{account['index']}] 时长{duration}s -> 成功")
+                return True
+            else:
+                print(f"[账号{account['index']}] 时长{duration}s -> 失败: {data}")
+        except Exception as e:
+            print(f"[账号{account['index']}] 时长{duration}s -> 异常: {e}")
+
+        if attempt < max_retry:
+            print(f"  🔁 重试第 {attempt+1} 次...")
+            time.sleep(2)
+
+    print(f"[账号{account['index']}] ❌ 时长{duration}s 最终失败")
+    return False
 
 
-def simulate_watch(account, start_duration, watch_duration):
-    """
-    模拟观看进度上报：
-    - 从 start_duration 开始，每隔30秒发一次，每次+30
-    - 直到 duration > watch_duration + 380
-    """
-    target = watch_duration + 380
-    duration = start_duration
-    print(f"  开始模拟观看: 当前={duration}s, 目标>{target}s")
-    while duration <= target:
-        send_duration_once(account, duration)
-        duration += 30
-        if duration <= target:
+def get_details(account):
+    url = f"{BASE_URL}/api/live/watch/details?version=v"
+    return request_json(url, account).get("data")
+
+
+def simulate_watch(account, start, total):
+    target = total + 380
+    cur = start
+    print(f"[账号{account['index']}] 开始刷时长 {cur} -> {target}")
+
+    while cur <= target:
+        send_duration(account, cur)
+        cur += 30
+        if cur <= target:
             time.sleep(30)
-    print(f"  ✅ 观看时长已达标 (最终={duration - 30}s)")
+
+    print(f"[账号{account['index']}] ✅ 时长完成")
 
 
-def do_answer(account, eve_id, answers_payload):
-    """
-    answers_payload: [{"queId": xxx, "ans": ["X"]}, ...]
-    返回 (pass: bool, result: dict)
-    """
+def do_answer(account, eve_id, payload):
     url = f"{BASE_URL}/api/live/watch/interactive?version=v"
     body = {
-        "answers": answers_payload,
-        "openId": account["openId"],
+        "answers": payload,
         "eveId": eve_id,
-        "state": account["state"],
-        "seeId": account["seeId"]
+        **account
     }
-    try:
-        r = requests.post(url, headers=HEADERS, json=body, timeout=15)
-        data = r.json()
-        if data.get("code") == 200:
-            result = data["data"]
-            passed = result.get("pass", False)
-            ans_str = ", ".join(f"{a['queId']}:{a['ans']}" for a in answers_payload)
-            print(f"  答题 [{ans_str}] -> pass={passed}")
-            return passed, result
-        else:
-            print(f"  答题响应异常: {data}")
-    except Exception as e:
-        print(f"  答题请求失败: {e}")
+    data = request_json(url, body)
+    if data.get("code") == 200:
+        return data["data"].get("pass"), data["data"]
     return False, None
 
 
-def get_answered_options(details, que_id):
-    """从详情的 answerList 中提取该题已答过的选项"""
-    answered = []
-    for item in details.get("answerList", []):
-        if item.get("queId") == que_id:
-            answered.extend(item.get("ans", []))
-    return list(set(answered))
+def get_answered(details, qid):
+    res = []
+    for i in details.get("answerList", []):
+        if i.get("queId") == qid:
+            res += i.get("ans", [])
+    return list(set(res))
 
 
 def main():
+    global answer
+
+    if answer and answer not in OPTIONS:
+        print("❌ answer 只能填 A/B/C/D")
+        return
+
     accounts = parse_accounts()
     if not accounts:
         return
-    print(f"✅ 共读取到 {len(accounts)} 个账号\n")
 
-    # 每个账号独立获取详情
+    print(f"✅ 共 {len(accounts)} 个账号\n")
+
+    # ===== 获取详情 =====
     account_details = {}
-    for account in accounts:
-        print(f"[账号{account['index']}] 获取题目详情...")
-        details = get_details(account)
-        if not details:
-            print(f"  ❌ 获取失败，跳过此账号")
-            continue
-        account_details[account["index"]] = details
+    for acc in accounts:
+        d = get_details(acc)
+        if d:
+            account_details[acc["index"]] = d
 
     if not account_details:
-        print("❌ 所有账号获取详情失败")
+        print("❌ 全部获取详情失败")
         return
 
-    # 并发模拟观看，全部完成后再答题
-    print("\n开始并发模拟观看...\n")
-    threads = []
-    for account in accounts:
-        details = account_details.get(account["index"])
-        if not details:
+    # ===== 并发刷时长 =====
+    print("\n⏳ 开始刷时长...\n")
+    ts = []
+    for acc in accounts:
+        d = account_details.get(acc["index"])
+        if not d:
             continue
-        start_dur = details.get("duration", 0)
-        watch_dur = details.get("watchDuration", 1800)
         t = threading.Thread(
             target=simulate_watch,
-            args=(account, start_dur, watch_dur),
-            daemon=True
+            args=(acc, d.get("duration", 0), d.get("watchDuration", 1800))
         )
-        threads.append(t)
+        ts.append(t)
         t.start()
 
-    for t in threads:
+    for t in ts:
         t.join()
 
-    print("\n✅ 所有账号观看时长已达标，开始答题\n")
+    print("\n✅ 时长全部完成\n")
 
-    # 取第一个成功的账号的题目信息作为基准
-    first_details = next(iter(account_details.values()))
-    questions = first_details.get("questions", [])
-    eve_id = first_details.get("eveId")
+    first = next(iter(account_details.values()))
+    questions = first.get("questions", [])
+    eve_id = first.get("eveId")
 
-    if not questions:
-        print("❌ 没有题目")
-        return
-
-    print(f"\neveId={eve_id}")
-    for q in questions:
-        print(f"题目[{q['id']}]: {q['question']}")
-        for k, v in sorted(q.get("option", {}).items()):
-            print(f"  {k}: {v}")
-    print()
-
-    # 每道题独立找正确答案
-    # correct_answers: {que_id: option}
     correct_answers = {}
 
-    for question in questions:
-        que_id = question["id"]
-        print(f"\n--- 处理题目 {que_id}: {question['question']} ---")
+    # ===== 答题 =====
+    for q in questions:
+        qid = q["id"]
+        print(f"\n--- 题目 {qid} ---")
 
-        # 已知正确答案则跳过试错
-        if que_id in correct_answers:
+        if answer:
+            correct_answers[qid] = answer
+            print(f"⚡ 使用统一答案: {answer}")
             continue
 
-        # 按账号顺序试错，每个账号跳过已答过的选项
-        # 维护一个全局"已试过"的选项列表（跨账号共享，避免重复）
-        tried_options = []
+        for opt in OPTIONS:
 
-        for account in accounts:
-            if que_id in correct_answers:
+            if qid in correct_answers:
                 break
 
-            details = account_details.get(account["index"])
-            if not details:
-                continue
+            print(f"\n>>> 尝试 {opt}")
 
-            # 该账号已答过的选项
-            already_answered = get_answered_options(details, que_id)
-            ans_max = details.get("answerMax", 2)
-            remaining = ans_max - len(already_answered)
+            for acc in accounts:
 
-            print(f"\n[账号{account['index']}] 已答: {already_answered}, 剩余次数: {remaining}")
-
-            if remaining <= 0:
-                print(f"  答题次数已用完，跳过")
-                # 但如果已答中有 suc=true 的，说明答对了
-                for item in details.get("answerList", []):
-                    if item.get("queId") == que_id and item.get("suc"):
-                        correct_answers[que_id] = item["ans"][0]
-                        print(f"  ✅ 从历史记录发现正确答案: {correct_answers[que_id]}")
-                continue
-
-            # 选一个没试过且没答过的选项
-            option_to_try = None
-            for opt in OPTIONS:
-                if opt not in tried_options and opt not in already_answered:
-                    option_to_try = opt
+                if qid in correct_answers:
                     break
 
-            if option_to_try is None:
-                print(f"  没有可用选项了，跳过")
-                continue
+                d = account_details.get(acc["index"])
+                if not d:
+                    continue
 
-            tried_options.append(option_to_try)
-            time.sleep(1)
-            passed, result = do_answer(account, eve_id, [{"queId": que_id, "ans": [option_to_try]}])
+                answered = get_answered(d, qid)
+                if opt in answered:
+                    continue
 
-            if passed:
-                correct_answers[que_id] = option_to_try
-                print(f"  🎉 正确答案是 {option_to_try}")
-            elif result:
-                # 从返回的 answerList 里看 suc 字段
-                for item in result.get("answerList", []):
-                    if item.get("queId") == que_id and item.get("suc"):
-                        correct_answers[que_id] = item["ans"][0]
-                        print(f"  🎉 从响应发现正确答案: {correct_answers[que_id]}")
+                remain = d.get("answerMax", 2) - len(answered)
+                if remain <= 0:
+                    continue
 
-    print(f"\n\n{'='*40}")
-    print(f"✅ 找到的正确答案: {correct_answers}")
-    print(f"{'='*40}\n")
+                time.sleep(1)
+                passed, result = do_answer(
+                    acc,
+                    eve_id,
+                    [{"queId": qid, "ans": [opt]}]
+                )
 
-    if not correct_answers:
-        print("❌ 未能找到任何正确答案")
-        return
+                print(f"[账号{acc['index']}] -> {opt} => {passed}")
 
-    # 所有账号用正确答案补答未答对的题
-    print("开始让所有账号补答正确答案...\n")
-    for account in accounts:
-        details = account_details.get(account["index"])
-        if not details:
+                if passed:
+                    correct_answers[qid] = opt
+                    print(f"🎉 正确答案: {opt}")
+                    break
+
+                if result:
+                    for i in result.get("answerList", []):
+                        if i.get("queId") == qid and i.get("suc"):
+                            correct_answers[qid] = i["ans"][0]
+                            print(f"🎉 解析答案: {correct_answers[qid]}")
+                            break
+
+    print("\n✅ 最终答案:", correct_answers)
+
+    # ===== 补答 =====
+    print("\n🔁 开始补答\n")
+    for acc in accounts:
+        d = account_details.get(acc["index"])
+        if not d:
             continue
 
-        # 找出该账号还没答对的题
-        need_answer = []
-        for question in questions:
-            que_id = question["id"]
-            correct_opt = correct_answers.get(que_id)
-            if not correct_opt:
+        todo = []
+        for q in questions:
+            qid = q["id"]
+            ans = correct_answers.get(qid)
+            if not ans:
                 continue
-            # 检查是否已经答对过
-            already_correct = any(
-                item.get("queId") == que_id and item.get("suc")
-                for item in details.get("answerList", [])
-            )
-            if already_correct:
-                continue
-            # 检查剩余次数
-            already_answered = get_answered_options(details, que_id)
-            ans_max = details.get("answerMax", 2)
-            if len(already_answered) >= ans_max:
-                print(f"[账号{account['index']}] 题目{que_id} 次数已用完，无法补答")
-                continue
-            need_answer.append({"queId": que_id, "ans": [correct_opt]})
 
-        if not need_answer:
-            print(f"[账号{account['index']}] 无需补答")
+            ok = any(i.get("queId") == qid and i.get("suc") for i in d.get("answerList", []))
+            if ok:
+                continue
+
+            if len(get_answered(d, qid)) >= d.get("answerMax", 2):
+                continue
+
+            todo.append({"queId": qid, "ans": [ans]})
+
+        if not todo:
+            print(f"[账号{acc['index']}] 无需补答")
             continue
 
-        print(f"[账号{account['index']}] 补答: {need_answer}")
-        time.sleep(1)
-        do_answer(account, eve_id, need_answer)
+        print(f"[账号{acc['index']}] 补答 {todo}")
+        do_answer(acc, eve_id, todo)
 
     print("\n🏁 全部完成")
 

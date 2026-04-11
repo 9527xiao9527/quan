@@ -1,6 +1,11 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-
+"""
+青龙面板脚本 - ppzyck 答题
+环境变量 ppzyck: state#seeId#openId，多账号换行分隔
+逻辑：按账号顺序轮流尝试 A/B/C/D，找到正确答案后所有账号用正确答案补答
+新增：手动答案answer（填 A/B/C/D，留空则自动试错）
+"""
 import os
 import time
 import threading

@@ -183,50 +183,48 @@ def main():
             print(f"⚡ 使用统一答案: {answer}")
             continue
 
-        for opt in OPTIONS:
-
+        # 按顺序轮转：选项索引对应账号索引（取模）
+        for opt_idx, opt in enumerate(OPTIONS):
             if qid in correct_answers:
                 break
 
-            print(f"\n>>> 尝试 {opt}")
+            acc = accounts[opt_idx % len(accounts)]
+            print(f"\n>>> 账号{acc['index']} 尝试 {opt}")
 
-            for acc in accounts:
+            d = account_details.get(acc["index"])
+            if not d:
+                continue
 
-                if qid in correct_answers:
-                    break
+            answered = get_answered(d, qid)
+            if opt in answered:
+                print(f"[账号{acc['index']}] {opt} 已答过，跳过")
+                continue
 
-                d = account_details.get(acc["index"])
-                if not d:
-                    continue
+            remain = d.get("answerMax", 2) - len(answered)
+            if remain <= 0:
+                print(f"[账号{acc['index']}] 已达答题上限，跳过")
+                continue
 
-                answered = get_answered(d, qid)
-                if opt in answered:
-                    continue
+            time.sleep(1)
+            passed, result = do_answer(
+                acc,
+                eve_id,
+                [{"queId": qid, "ans": [opt]}]
+            )
 
-                remain = d.get("answerMax", 2) - len(answered)
-                if remain <= 0:
-                    continue
+            print(f"[账号{acc['index']}] -> {opt} => {passed}")
 
-                time.sleep(1)
-                passed, result = do_answer(
-                    acc,
-                    eve_id,
-                    [{"queId": qid, "ans": [opt]}]
-                )
+            if passed:
+                correct_answers[qid] = opt
+                print(f"🎉 正确答案: {opt}")
+                break
 
-                print(f"[账号{acc['index']}] -> {opt} => {passed}")
-
-                if passed:
-                    correct_answers[qid] = opt
-                    print(f"🎉 正确答案: {opt}")
-                    break
-
-                if result:
-                    for i in result.get("answerList", []):
-                        if i.get("queId") == qid and i.get("suc"):
-                            correct_answers[qid] = i["ans"][0]
-                            print(f"🎉 解析答案: {correct_answers[qid]}")
-                            break
+            if result:
+                for i in result.get("answerList", []):
+                    if i.get("queId") == qid and i.get("suc"):
+                        correct_answers[qid] = i["ans"][0]
+                        print(f"🎉 解析答案: {correct_answers[qid]}")
+                        break
 
     print("\n✅ 最终答案:", correct_answers)
 

@@ -13,7 +13,7 @@ const headers = {
 
 const sleep = t => new Promise(r => setTimeout(r, t));
 
-// 👉 从URL解析参数
+// 从URL提取参数
 function getParam(name) {
     let m = url.match(new RegExp(name + "=([^&]+)"));
     return m ? m[1] : "";
@@ -21,23 +21,24 @@ function getParam(name) {
 
 (async () => {
 
-    // 解析参数
     const userId = getParam("userId");
     const sessionKey = getParam("sessionKey");
     const courseId = getParam("courseId");
     const consultantId = getParam("consultantId");
 
-    // 1️⃣ enter（用你存的URL）
+    // 1️⃣ enter（获取课程信息）
     let enterRes = await $task.fetch({ url, headers });
     let enterData = JSON.parse(enterRes.body).data;
 
     let memberId = enterData.memberId;
     let duration = enterData.duration;
-    let answer = enterData.assignment[0].answer;
+
+    // ✅ 多题处理
+    let answers = (enterData.assignment || []).map(i => i.answer);
 
     console.log("memberId:", memberId);
     console.log("duration:", duration);
-    console.log("answer:", answer);
+    console.log("answers:", answers);
 
     await sleep(800);
 
@@ -59,15 +60,21 @@ function getParam(name) {
 
     await sleep(800);
 
-    // 4️⃣ assignment
-    let ans = encodeURIComponent(JSON.stringify([answer]));
+    // 4️⃣ assignment（有题才提交）
+    if (answers.length > 0) {
 
-    let answerUrl = `https://api.qingkeguanli.com/frontend/web/index.php?r=term-course/assignment&userId=${userId}&sessionKey=${sessionKey}&courseId=${courseId}&consultantId=${consultantId}&checkLog=1&answer=${ans}`;
+        let ans = encodeURIComponent(JSON.stringify(answers));
 
-    let a = await $task.fetch({ url: answerUrl, headers });
-    console.log("answer:", a.body);
+        let answerUrl = `https://api.qingkeguanli.com/frontend/web/index.php?r=term-course/assignment&userId=${userId}&sessionKey=${sessionKey}&courseId=${courseId}&consultantId=${consultantId}&checkLog=1&answer=${ans}`;
 
-    $notify("执行完成", "", a.body);
+        let a = await $task.fetch({ url: answerUrl, headers });
+        console.log("answer:", a.body);
+
+        $notify("完成（含答题）", "", a.body);
+
+    } else {
+        $notify("完成（无题目）", "", "课程已完成");
+    }
 
     $done();
 

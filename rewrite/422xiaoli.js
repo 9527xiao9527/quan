@@ -11,6 +11,6 @@ delete req.headers["content-length"];
 $prefs.setValueForKey(JSON.stringify(req), "0422xiaoli");
 
 console.log("✅ 已保存完整请求");
-$notify("答题脚本", "抓包成功", "完整请求已保存");
+$notify("0422小丽", "", "完整请求已获取");
 
 $done({});

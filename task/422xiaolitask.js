@@ -1,3 +1,5 @@
+// 0422xiaoli_task_final.js
+
 const BASE = "https://dt.yuanhukj.com/api";
 
 function loadReq() {
@@ -14,14 +16,9 @@ function fetch(req) {
     try {
       return JSON.parse(res.body);
     } catch {
-      return res.body;
+      return {};
     }
   });
-}
-
-function buildUrl(baseUrl, params) {
-  let u = baseUrl.split("?")[0];
-  return u + "?" + params;
 }
 
 !(async () => {
@@ -31,18 +28,21 @@ function buildUrl(baseUrl, params) {
 
   let headers = saved.headers;
 
-  // 👉 从抓包URL提取公共参数
+  // 👉 提取URL参数
   let urlObj = new URL(saved.url);
   let baseParams = urlObj.search;
-
-  // 👉 自动识别 activityId（也可以手动改）
   let activityId = urlObj.searchParams.get("activityId");
 
-  console.log("使用活动ID:", activityId);
+  if (!activityId) {
+    $notify("❌错误", "", "activityId 获取失败");
+    return;
+  }
 
-  let total = 0;
+  console.log(`🎯 活动ID: ${activityId}`);
 
+  // =========================
   // 1️⃣ 获取答案
+  // =========================
   let info = await fetch({
     method: "GET",
     url: `${BASE}/videoQuiz/getActivityById${baseParams}`,
@@ -53,27 +53,37 @@ function buildUrl(baseUrl, params) {
   let answer = data.correctOption;
 
   if (!answer) {
-    $notify("❌失败", "", "没拿到答案");
+    $notify("❌失败", "", "未获取到答案");
     return;
   }
 
-  console.log("答案:", answer);
+  console.log(`✅ 答案: ${answer}`);
 
+  // =========================
   // 2️⃣ 参与
-  await fetch({
+  // =========================
+  let join = await fetch({
     method: "GET",
     url: `${BASE}/videoQuiz/userParticipate${baseParams}&isParticipate=1`,
     headers
   });
 
-  // 3️⃣ 提交答案
+  console.log("📌 参与:", join.msg || "OK");
+
+  // =========================
+  // 3️⃣ 答题
+  // =========================
   await fetch({
     method: "GET",
     url: `${BASE}/videoQuiz/submitAnswer${baseParams}&answerOption=${answer}`,
     headers
   });
 
+  console.log("🧠 已提交答案");
+
+  // =========================
   // 4️⃣ 领奖
+  // =========================
   let reward = await fetch({
     method: "POST",
     url: `${BASE}/mobile/pay/pay-payment-channel/addUserWithdraw`,
@@ -81,18 +91,23 @@ function buildUrl(baseUrl, params) {
       ...headers,
       "content-type": "application/x-www-form-urlencoded"
     },
-    body: baseParams.replace("?", "") + `&videoQuizActivityId=${activityId}&isIntroVideo=${data.isIntroVideo || 0}`
+    body: baseParams.replace("?", "") +
+          `&videoQuizActivityId=${activityId}&isIntroVideo=${data.isIntroVideo || 0}`
   });
 
   let r = reward.data || {};
   let money = parseFloat(r.withdrawAmount || 0);
+  let msg = r.reason || reward.msg || "未知";
 
-  total += money;
+  console.log(`💰 领奖: ${msg} | ${money}`);
 
-  console.log("奖励:", money);
+  // =========================
+  // 完成通知
+  // =========================
+  $notify("🎉答题完成", `活动ID: ${activityId}`, `收益：${money.toFixed(2)}`);
 
-  $notify("🎉答题完成", "", `收益：${total.toFixed(2)}`);
-
-})().catch(e => {
-  $notify("❌错误", "", e.message);
+})()
+.finally(() => {
+  // 🔥 关键：确保脚本一定结束
+  $done();
 });

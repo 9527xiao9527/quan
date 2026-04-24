@@ -33,6 +33,8 @@ def report_progress(host, headers, ticket, roomId, sessionId, videoLength, start
     print(f"\n📺 账号{index} 开始刷视频")
     print(f"▶ 当前进度: {play}")
     print(f"🎬 总时长: {videoLength}")
+
+    # 👉 更真实
     view = 1
 
     while play < videoLength:

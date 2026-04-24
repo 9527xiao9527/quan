@@ -24,7 +24,7 @@ let newHeaders = {
 let line = `${url}#${JSON.stringify(newHeaders)}`;
 
 // 读取已有数据
-let key = "qkl_live_accounts";
+let key = "tickets1";
 let old = $prefs.valueForKey(key) || "";
 
 // 去重（按 token）

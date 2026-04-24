@@ -21,7 +21,7 @@ let newHeaders = {
 };
 
 // 生成一行数据
-let line = `${url}#${JSON.stringify(newHeaders)}`;
+let line = `${url}#${JSON.stringify(headers)}`;
 
 // 读取已有数据
 let key = "tickets1";

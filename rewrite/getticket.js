@@ -40,6 +40,6 @@ $prefs.setValueForKey(filtered.join("\n"), key);
 console.log("✅ CK写入成功");
 console.log(line);
 
-$notify("抓取成功", "已写入账号", token.slice(0, 20) + "...");
+$notify("getticket抓取成功", "已写入账号", token.slice(0, 20) + "...");
 
 $done({});

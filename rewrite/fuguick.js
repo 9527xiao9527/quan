@@ -8,7 +8,9 @@ let url = $request.url;
 let headers = $request.headers;
 
 // 提取参数
-let auth = headers["Authorization"] || headers["authorization"];
+let authRaw = headers["Authorization"] || headers["authorization"];
+let auth = authRaw ? authRaw.replace(/^Bearer\s+/i, "") : "";
+
 let managerId = url.match(/managerId=([^&]+)/)?.[1];
 let scheduleId = url.match(/scheduleId=([^&]+)/)?.[1];
 

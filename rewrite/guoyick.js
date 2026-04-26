@@ -3,7 +3,7 @@
  * 1️⃣ 拦截 class/info 接口
  * 2️⃣ 提取参数写入本地（保留）
  * 3️⃣ 重写 playOver = 1
- * 4️⃣ 通知只显示答案
+ * 4️⃣ 通知显示答案 + 达标时长 + 红包
  */
 
 const KEY = "xk_params";
@@ -45,12 +45,12 @@ if ($response && $response.body) {
       periodId = info.periodId;
       playedDuration = info.duration || 0;
 
-      // 重写播放状态
+      // ✅ 重写播放状态
       if (info.classUser && info.classUser.playOver !== undefined) {
         info.classUser.playOver = 1;
       }
 
-      // 解析题目答案
+      // ✅ 解析题目答案
       (info.questions || []).forEach((q, i) => {
         let right = (q.options || [])
           .filter(o => o.rightAnswer === 1)
@@ -67,7 +67,7 @@ if ($response && $response.body) {
   }
 }
 
-// ========== 保存变量（保留） ==========
+// ========== 保存变量 ==========
 let save =
   `host=${host}` +
   `#token=${token}` +
@@ -77,7 +77,7 @@ let save =
   `#played=${playedDuration}` +
   `#questions=${encodeURIComponent(JSON.stringify(questions))}`;
 
-// ========== 生成通知（只显示答案） ==========
+// ========== 生成通知（答案） ==========
 let answerText = "答案：\n";
 
 if (questions.length > 0) {
@@ -88,10 +88,31 @@ if (questions.length > 0) {
   answerText += "暂无题目";
 }
 
+// ========== ✅ 只额外增加：达标时长 + 红包 ==========
+let needPlaySeconds = 0;
+let redPackMoney = 0;
+
+if (bodyObj && bodyObj.info) {
+  const info = bodyObj.info;
+
+  const duration = info.duration || 0;
+  const percent = info.classSettings?.playOverCondition || 0;
+
+  // 达标时长（秒）
+  needPlaySeconds = Math.floor(duration * percent / 100);
+
+  // 红包金额（元）
+  redPackMoney = (info.classSettings?.redPackReward || 0) / 100;
+}
+
+// 👉 追加两行
+answerText += `\n⏱ 达标时长：${needPlaySeconds}s`;
+answerText += `\n💰 红包：${redPackMoney}元`;
+
 // ========== 仅变化时保存 ==========
 if (save !== old) {
-  $prefs.setValueForKey(save, KEY); // ✅ 这里仍然保存
-  $notify("guoyi已获取", "", answerText); // ✅ 这里只显示答案
+  $prefs.setValueForKey(save, KEY);
+  $notify("guoyi已获取", "", answerText);
 }
 
 // ========== 返回 ==========

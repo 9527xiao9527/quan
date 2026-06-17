@@ -1,6 +1,6 @@
 let body = $response.body;
 
-console.log("响应体：" + body);
+//console.log("响应体：" + body);
 
 if (!body || body === "undefined") {
     console.log("响应为空，跳过");

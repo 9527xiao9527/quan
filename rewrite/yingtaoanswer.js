@@ -19,7 +19,7 @@ if (!body || body === "undefined") {
             console.log(`答案：${answer}`);
 
             $notify(
-                "遇见答题助手",
+                "答题助手",
                 title || "发现题目",
                 `答案：${answer}`
             );

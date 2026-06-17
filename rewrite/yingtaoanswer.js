@@ -1,18 +1,35 @@
 let body = $response.body;
 
-try {
-    const obj = JSON.parse(body);
+console.log("响应体：" + body);
 
-    const answer = obj?.data?.arrayList?.[0]?._tilist?.[0]?.needChoose;
+if (!body || body === "undefined") {
+    console.log("响应为空，跳过");
+    $done({});
+} else {
+    try {
+        let obj = JSON.parse(body);
 
-    if (answer) {
-        $notify("题目答案", "", `正确答案：${answer}`);
-    } else {
-        $notify("题目答案", "", "未找到答案");
+        let answer =
+            obj?.data?.arrayList?.[0]?._tilist?.[0]?.needChoose;
+        let title =
+            obj?.data?.arrayList?.[0]?._tilist?.[0]?.title?.trim();
+
+        if (answer) {
+            console.log(`题目：${title}`);
+            console.log(`答案：${answer}`);
+
+            $notify(
+                "遇见答题助手",
+                title || "发现题目",
+                `答案：${answer}`
+            );
+        } else {
+            console.log("未发现答案");
+        }
+
+        $done({ body });
+    } catch (e) {
+        console.log("解析失败：" + e);
+        $done({});
     }
-} catch (e) {
-    console.log(e);
-    $notify("题目答案", "", "解析失败");
 }
-
-$done({ body });

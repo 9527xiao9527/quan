@@ -222,13 +222,13 @@ def run_account(line, index):
 
         headers["X-SeqId"] = random_seq()
 
-        submit_url = f"{base}/xk/kc/client/class/submit/work?sa={sa}&uuid="
+        #submit_url = f"{base}/xk/kc/client/class/submit/work?sa={sa}&uuid="
 
-        r2 = requests.post(submit_url, headers=headers, json=submit_body)
-        print(f"账号{index} 答题响应:", r2.text)
+        #r2 = requests.post(submit_url, headers=headers, json=submit_body)
+        #print(f"账号{index} 答题响应:", r2.text)
 
         # ===== 领红包 =====
-        get_red_pack(base, headers, url, info, index)
+        #get_red_pack(base, headers, url, info, index)
 
         print(f"====== 账号{index} 完成 ======")
 

@@ -50,9 +50,9 @@ $prefs.setValueForKey(value, "slbz");
 
 // ===== 5. 通知 =====
 $notify(
-  "✅ 上你课参数捕获成功",
-  `u：${u}  p：${p}`,
-  "已写入本地变量 slbz (格式 url#header#body)"
+  "获取成功",
+  "",
+  value
 );
 
 $done({});

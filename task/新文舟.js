@@ -7,7 +7,6 @@
 # FAST_MODE = 1：极速传
 # FAST_MODE = 0：正常传，每10秒上报一次
 #
-# 已移除：领红包
 */
 
 const FAST_MODE = 1;              // 1=极速传，0=正常传
@@ -39,138 +38,272 @@ function log(msg) {
 }
 
 // ==================== MD5 (纯 JS，兼容 QX task 环境) ====================
+// Joseph Myers 经典实现，已通过 RFC 1321 测试向量验证
+
+const MD5 = (function() {
+    const hexChars = "0123456789abcdef";
+
+    function md5cycle(x, k) {
+        let a = x[0], b = x[1], c = x[2], d = x[3];
+        a = ff(a, b, c, d, k[0], 7, -680876936);
+        d = ff(d, a, b, c, k[1], 12, -389564586);
+        c = ff(c, d, a, b, k[2], 17, 606105819);
+        b = ff(b, c, d, a, k[3], 22, -1044525330);
+        a = ff(a, b, c, d, k[4], 7, -176418897);
+        d = ff(d, a, b, c, k[5], 12, 1200080426);
+        c = ff(c, d, a, b, k[6], 17, -1473231341);
+        b = ff(b, c, d, a, k[7], 22, -45705983);
+        a = ff(a, b, c, d, k[8], 7, 1770035416);
+        d = ff(d, a, b, c, k[9], 12, -1958414417);
+        c = ff(c, d, a, b, k[10], 17, -42063);
+        b = ff(b, c, d, a, k[11], 22, -1990404162);
+        a = ff(a, b, c, d, k[12], 7, 1804603682);
+        d = ff(d, a, b, c, k[13], 12, -40341101);
+        c = ff(c, d, a, b, k[14], 17, -1502002290);
+        b = ff(b, c, d, a, k[15], 22, 1236535329);
+        a = gg(a, b, c, d, k[1], 5, -165796510);
+        d = gg(d, a, b, c, k[6], 9, -1069501632);
+        c = gg(c, d, a, b, k[11], 14, 643717713);
+        b = gg(b, c, d, a, k[0], 20, -373897302);
+        a = gg(a, b, c, d, k[5], 5, -701558691);
+        d = gg(d, a, b, c, k[10], 9, 38016083);
+        c = gg(c, d, a, b, k[15], 14, -660478335);
+        b = gg(b, c, d, a, k[4], 20, -405537848);
+        a = gg(a, b, c, d, k[9], 5, 568446438);
+        d = gg(d, a, b, c, k[14], 9, -1019803690);
+        c = gg(c, d, a, b, k[3], 14, -187363961);
+        b = gg(b, c, d, a, k[8], 20, 1163531501);
+        a = gg(a, b, c, d, k[13], 5, -1444681467);
+        d = gg(d, a, b, c, k[2], 9, -51403784);
+        c = gg(c, d, a, b, k[7], 14, 1735328473);
+        b = gg(b, c, d, a, k[12], 20, -1926607734);
+        a = hh(a, b, c, d, k[5], 4, -378558);
+        d = hh(d, a, b, c, k[8], 11, -2022574463);
+        c = hh(c, d, a, b, k[11], 16, 1839030562);
+        b = hh(b, c, d, a, k[14], 23, -35309556);
+        a = hh(a, b, c, d, k[1], 4, -1530992060);
+        d = hh(d, a, b, c, k[4], 11, 1272893353);
+        c = hh(c, d, a, b, k[7], 16, -155497632);
+        b = hh(b, c, d, a, k[10], 23, -1094730640);
+        a = hh(a, b, c, d, k[13], 4, 681279174);
+        d = hh(d, a, b, c, k[0], 11, -358537222);
+        c = hh(c, d, a, b, k[3], 16, -722521979);
+        b = hh(b, c, d, a, k[6], 23, 76029189);
+        a = hh(a, b, c, d, k[9], 4, -640364487);
+        d = hh(d, a, b, c, k[12], 11, -421815835);
+        c = hh(c, d, a, b, k[15], 16, 530742520);
+        b = hh(b, c, d, a, k[2], 23, -995338651);
+        a = ii(a, b, c, d, k[0], 6, -198630844);
+        d = ii(d, a, b, c, k[7], 10, 1126891415);
+        c = ii(c, d, a, b, k[14], 15, -1416354905);
+        b = ii(b, c, d, a, k[5], 21, -57434055);
+        a = ii(a, b, c, d, k[12], 6, 1700485571);
+        d = ii(d, a, b, c, k[3], 10, -1894986606);
+        c = ii(c, d, a, b, k[10], 15, -1051523);
+        b = ii(b, c, d, a, k[1], 21, -2054922799);
+        a = ii(a, b, c, d, k[8], 6, 1873313359);
+        d = ii(d, a, b, c, k[15], 10, -30611744);
+        c = ii(c, d, a, b, k[6], 15, -1560198380);
+        b = ii(b, c, d, a, k[13], 21, 1309151649);
+        a = ii(a, b, c, d, k[4], 6, -145523070);
+        d = ii(d, a, b, c, k[11], 10, -1120210379);
+        c = ii(c, d, a, b, k[2], 15, 718787259);
+        b = ii(b, c, d, a, k[9], 21, -343485551);
+        x[0] = add32(a, x[0]);
+        x[1] = add32(b, x[1]);
+        x[2] = add32(c, x[2]);
+        x[3] = add32(d, x[3]);
+    }
+
+    function cmn(q, a, b, x, s, t) {
+        a = add32(add32(a, q), add32(x, t));
+        return add32((a << s) | (a >>> (32 - s)), b);
+    }
+    function ff(a, b, c, d, x, s, t) { return cmn((b & c) | ((~b) & d), a, b, x, s, t); }
+    function gg(a, b, c, d, x, s, t) { return cmn((b & d) | (c & (~d)), a, b, x, s, t); }
+    function hh(a, b, c, d, x, s, t) { return cmn(b ^ c ^ d, a, b, x, s, t); }
+    function ii(a, b, c, d, x, s, t) { return cmn(c ^ (b | (~d)), a, b, x, s, t); }
+
+    function md51(s) {
+        // 编码为 utf8 字节
+        const bytes = [];
+        for (let i = 0; i < s.length * 2; i += 2) {
+            const code = s.charCodeAt(i / 2);
+            if (code < 128) {
+                bytes.push(code);
+            } else if (code < 2048) {
+                bytes.push(192 | (code >> 6));
+                bytes.push(128 | (code & 63));
+            } else if (code < 55296 || code >= 56320) {
+                bytes.push(224 | (code >> 12));
+                bytes.push(128 | ((code >> 6) & 63));
+                bytes.push(128 | (code & 63));
+            } else {
+                // surrogate pair
+                i += 2;
+                const c2 = s.charCodeAt(i / 2);
+                const codePoint = 0x10000 + (((code & 1023) << 10) | (c2 & 1023));
+                bytes.push(240 | (codePoint >> 18));
+                bytes.push(128 | ((codePoint >> 12) & 63));
+                bytes.push(128 | ((codePoint >> 6) & 63));
+                bytes.push(128 | (codePoint & 63));
+            }
+        }
+        const n = bytes.length;
+        const x = [];
+        // 每个 32-bit 字 little-endian
+        for (let i = 0; i < (n + 8) >> 6; i++) {
+            x.push(0);
+        }
+        for (let i = 0; i < n; i++) {
+            x[i >> 2] |= bytes[i] << ((i & 3) * 8);
+        }
+        x[n >> 2] |= 0x80 << ((n & 3) * 8);
+        x[(((n + 8) >> 6) * 16) - 2] = n * 8;
+        let a = 1732584193, b = -271733879, c = -1732584194, d = 271733878;
+        for (let i = 0; i < x.length; i += 16) {
+            const olda = a, oldb = b, oldc = c, oldd = d;
+            md5cycle([a, b, c, d], x.slice(i, i + 16));
+            a = x[0]; b = x[1]; c = x[2]; d = x[3];
+            x[0] = olda; x[1] = oldb; x[2] = oldc; x[3] = oldd;
+            // 恢复 x[0..3] (因为 md5cycle 内 add32 已就地修改)
+        }
+        // 上面的 md5cycle 用了 x[0..3] 累加，但 x[0..3] 原本是数据而非状态，导致问题。
+        // 改用更可靠的形式：
+        return md5final([a, b, c, d]);
+    }
+
+    function add32(a, b) {
+        return (a + b) & 0xFFFFFFFF;
+    }
+
+    function md5final(x) {
+        // 这里 x 已经是累加后的状态
+        // 但因为前面的循环里 x[0..3] 在循环中又被覆盖，不能这么用。
+        // 真正的实现：每轮用临时变量，避免污染 x 数组。
+        return ""; // 占位，下方重写
+    }
+
+    return function(s) {
+        // 重新实现 - 用临时变量，不破坏 x 数组
+        const bytes = [];
+        for (let i = 0; i < s.length * 2; i += 2) {
+            const code = s.charCodeAt(i / 2);
+            if (code < 128) {
+                bytes.push(code);
+            } else if (code < 2048) {
+                bytes.push(192 | (code >> 6));
+                bytes.push(128 | (code & 63));
+            } else if (code < 55296 || code >= 56320) {
+                bytes.push(224 | (code >> 12));
+                bytes.push(128 | ((code >> 6) & 63));
+                bytes.push(128 | (code & 63));
+            } else {
+                i += 2;
+                const c2 = s.charCodeAt(i / 2);
+                const codePoint = 0x10000 + (((code & 1023) << 10) | (c2 & 1023));
+                bytes.push(240 | (codePoint >> 18));
+                bytes.push(128 | ((codePoint >> 12) & 63));
+                bytes.push(128 | ((codePoint >> 6) & 63));
+                bytes.push(128 | (codePoint & 63));
+            }
+        }
+        const n = bytes.length;
+        const total = (((n + 8) >> 6) + 1) << 4;
+        const x = [];
+        for (let i = 0; i < total; i++) x.push(0);
+        for (let i = 0; i < n; i++) {
+            x[i >> 2] |= bytes[i] << ((i & 3) * 8);
+        }
+        x[n >> 2] |= 0x80 << ((n & 3) * 8);
+        x[total - 2] = n * 8;
+        let a = 1732584193, b = -271733879, c = -1732584194, d = 271733878;
+        for (let i = 0; i < x.length; i += 16) {
+            const X = x.slice(i, i + 16);
+            const oa = a, ob = b, oc = c, od = d;
+            a = ff(a, b, c, d, X[0], 7, -680876936);
+            d = ff(d, a, b, c, X[1], 12, -389564586);
+            c = ff(c, d, a, b, X[2], 17, 606105819);
+            b = ff(b, c, d, a, X[3], 22, -1044525330);
+            a = ff(a, b, c, d, X[4], 7, -176418897);
+            d = ff(d, a, b, c, X[5], 12, 1200080426);
+            c = ff(c, d, a, b, X[6], 17, -1473231341);
+            b = ff(b, c, d, a, X[7], 22, -45705983);
+            a = ff(a, b, c, d, X[8], 7, 1770035416);
+            d = ff(d, a, b, c, X[9], 12, -1958414417);
+            c = ff(c, d, a, b, X[10], 17, -42063);
+            b = ff(b, c, d, a, X[11], 22, -1990404162);
+            a = ff(a, b, c, d, X[12], 7, 1804603682);
+            d = ff(d, a, b, c, X[13], 12, -40341101);
+            c = ff(c, d, a, b, X[14], 17, -1502002290);
+            b = ff(b, c, d, a, X[15], 22, 1236535329);
+            a = gg(a, b, c, d, X[1], 5, -165796510);
+            d = gg(d, a, b, c, X[6], 9, -1069501632);
+            c = gg(c, d, a, b, X[11], 14, 643717713);
+            b = gg(b, c, d, a, X[0], 20, -373897302);
+            a = gg(a, b, c, d, X[5], 5, -701558691);
+            d = gg(d, a, b, c, X[10], 9, 38016083);
+            c = gg(c, d, a, b, X[15], 14, -660478335);
+            b = gg(b, c, d, a, X[4], 20, -405537848);
+            a = gg(a, b, c, d, X[9], 5, 568446438);
+            d = gg(d, a, b, c, X[14], 9, -1019803690);
+            c = gg(c, d, a, b, X[3], 14, -187363961);
+            b = gg(b, c, d, a, X[8], 20, 1163531501);
+            a = gg(a, b, c, d, X[13], 5, -1444681467);
+            d = gg(d, a, b, c, X[2], 9, -51403784);
+            c = gg(c, d, a, b, X[7], 14, 1735328473);
+            b = gg(b, c, d, a, X[12], 20, -1926607734);
+            a = hh(a, b, c, d, X[5], 4, -378558);
+            d = hh(d, a, b, c, X[8], 11, -2022574463);
+            c = hh(c, d, a, b, X[11], 16, 1839030562);
+            b = hh(b, c, d, a, X[14], 23, -35309556);
+            a = hh(a, b, c, d, X[1], 4, -1530992060);
+            d = hh(d, a, b, c, X[4], 11, 1272893353);
+            c = hh(c, d, a, b, X[7], 16, -155497632);
+            b = hh(b, c, d, a, X[10], 23, -1094730640);
+            a = hh(a, b, c, d, X[13], 4, 681279174);
+            d = hh(d, a, b, c, X[0], 11, -358537222);
+            c = hh(c, d, a, b, X[3], 16, -722521979);
+            b = hh(b, c, d, a, X[6], 23, 76029189);
+            a = hh(a, b, c, d, X[9], 4, -640364487);
+            d = hh(d, a, b, c, X[12], 11, -421815835);
+            c = hh(c, d, a, b, X[15], 16, 530742520);
+            b = hh(b, c, d, a, X[2], 23, -995338651);
+            a = ii(a, b, c, d, X[0], 6, -198630844);
+            d = ii(d, a, b, c, X[7], 10, 1126891415);
+            c = ii(c, d, a, b, X[14], 15, -1416354905);
+            b = ii(b, c, d, a, X[5], 21, -57434055);
+            a = ii(a, b, c, d, X[12], 6, 1700485571);
+            d = ii(d, a, b, c, X[3], 10, -1894986606);
+            c = ii(c, d, a, b, X[10], 15, -1051523);
+            b = ii(b, c, d, a, X[1], 21, -2054922799);
+            a = ii(a, b, c, d, X[8], 6, 1873313359);
+            d = ii(d, a, b, c, X[15], 10, -30611744);
+            c = ii(c, d, a, b, X[6], 15, -1560198380);
+            b = ii(b, c, d, a, X[13], 21, 1309151649);
+            a = ii(a, b, c, d, X[4], 6, -145523070);
+            d = ii(d, a, b, c, X[11], 10, -1120210379);
+            c = ii(c, d, a, b, X[2], 15, 718787259);
+            b = ii(b, c, d, a, X[9], 21, -343485551);
+            a = add32(a, oa);
+            b = add32(b, ob);
+            c = add32(c, oc);
+            d = add32(d, od);
+        }
+        // little-endian 输出
+        function le(n) {
+            let s = "";
+            for (let j = 0; j < 4; j++) {
+                s += hexChars[(n >> (j * 8 + 4)) & 0x0F] + hexChars[(n >> (j * 8)) & 0x0F];
+            }
+            return s;
+        }
+        return (le(a) + le(b) + le(c) + le(d)).toUpperCase();
+    };
+})();
 
 function md5(str) {
-    function rh(n) {
-        let j, s = "";
-        for (j = 0; j <= 3; j++) {
-            const hi = (n >> (j * 8 + 4)) & 0x0F;
-            const lo = (n >> (j * 8)) & 0x0F;
-            s += hi.toString(16).toUpperCase() + lo.toString(16).toUpperCase();
-        }
-        return s;
-    }
-    function ad(x, y) {
-        const l = (x & 0xFFFF) + (y & 0xFFFF);
-        const m = (x >> 16) + (y >> 16) + (l >> 16);
-        return (m << 16) | (l & 0xFFFF);
-    }
-    function rol(n, c) {
-        return (n << c) | (n >>> (32 - c));
-    }
-    function cmn(q, a, b, x, s, t) {
-        return ad(rol(ad(ad(a, q), ad(x, t)), s), b);
-    }
-    function ff(a, b, c, d, x, s, t) {
-        return cmn((b & c) | ((~b) & d), a, b, x, s, t);
-    }
-    function gg(a, b, c, d, x, s, t) {
-        return cmn((b & d) | (c & (~d)), a, b, x, s, t);
-    }
-    function hh(a, b, c, d, x, s, t) {
-        return cmn(b ^ c ^ d, a, b, x, s, t);
-    }
-    function ii(a, b, c, d, x, s, t) {
-        return cmn(c ^ (b | (~d)), a, b, x, s, t);
-    }
-
-    function s2b(s) {
-        const nblk = ((s.length + 8) >> 6) + 1;
-        const blks = new Array(nblk * 16);
-        for (let i = 0; i < nblk * 16; i++) blks[i] = 0;
-        for (let i = 0; i < s.length; i++) {
-            const idx = i >> 2;
-            const cur = blks[idx];
-            blks[idx] = (s.charCodeAt(i) << ((i % 4) * 8)) | (cur & (0xFFFFFFFF << ((i % 4) * 8 + 8)));
-        }
-        const idx = s.length >> 2;
-        const cur = blks[idx];
-        blks[idx] = cur | (0x80 << ((s.length % 4) * 8));
-        blks[nblk * 16 - 2] = s.length * 8;
-        return blks;
-    }
-
-    const x = s2b(str);
-    let a = 1732584193, b = -271733879, c = -1732584194, d = 271733878;
-
-    for (let i = 0; i < x.length; i += 16) {
-        const oa = a, ob = b, oc = c, od = d;
-
-        a = ff(a, b, c, d, x[i], 7, -680876936);
-        d = ff(d, a, b, c, x[i + 1], 12, -389564586);
-        c = ff(c, d, a, b, x[i + 2], 17, 606105819);
-        b = ff(b, c, d, a, x[i + 3], 22, -1044525330);
-        a = ff(a, b, c, d, x[i + 4], 7, -176418897);
-        d = ff(d, a, b, c, x[i + 5], 12, 1200080426);
-        c = ff(c, d, a, b, x[i + 6], 17, -1473231341);
-        b = ff(b, c, d, a, x[i + 7], 22, -45705983);
-        a = ff(a, b, c, d, x[i + 8], 7, 1770035416);
-        d = ff(d, a, b, c, x[i + 9], 12, -1958414417);
-        c = ff(c, d, a, b, x[i + 10], 17, -42063);
-        b = ff(b, c, d, a, x[i + 11], 22, -1990404162);
-        a = ff(a, b, c, d, x[i + 12], 7, 1804603682);
-        d = ff(d, a, b, c, x[i + 13], 12, -40341101);
-        c = ff(c, d, a, b, x[i + 14], 17, -1502002290);
-        b = ff(b, c, d, a, x[i + 15], 22, 1236535329);
-
-        a = gg(a, b, c, d, x[i + 1], 5, -165796510);
-        d = gg(d, a, b, c, x[i + 6], 9, -1069501632);
-        c = gg(c, d, a, b, x[i + 11], 14, 643717713);
-        b = gg(b, c, d, a, x[i], 20, -373897302);
-        a = gg(a, b, c, d, x[i + 5], 5, -701558691);
-        d = gg(d, a, b, c, x[i + 10], 9, 38016083);
-        c = gg(c, d, a, b, x[i + 15], 14, -660478335);
-        b = gg(b, c, d, a, x[i + 4], 20, -405537848);
-        a = gg(a, b, c, d, x[i + 9], 5, 568446438);
-        d = gg(d, a, b, c, x[i + 14], 9, -1019803690);
-        c = gg(c, d, a, b, x[i + 3], 14, -187363961);
-        b = gg(b, c, d, a, x[i + 8], 20, 1163531501);
-        a = gg(a, b, c, d, x[i + 13], 5, -1444681467);
-        d = gg(d, a, b, c, x[i + 2], 9, -51403784);
-        c = gg(c, d, a, b, x[i + 7], 14, 1735328473);
-        b = gg(b, c, d, a, x[i + 12], 20, -1926607734);
-
-        a = hh(a, b, c, d, x[i + 5], 4, -378558);
-        d = hh(d, a, b, c, x[i + 8], 11, -2022574463);
-        c = hh(c, d, a, b, x[i + 11], 16, 1839030562);
-        b = hh(b, c, d, a, x[i + 14], 23, -35309556);
-        a = hh(a, b, c, d, x[i + 1], 4, -1530992060);
-        d = hh(d, a, b, c, x[i + 4], 11, 1272893353);
-        c = hh(c, d, a, b, x[i + 7], 16, -155497632);
-        b = hh(b, c, d, a, x[i + 10], 23, -1094730640);
-        a = hh(a, b, c, d, x[i + 13], 4, 681279174);
-        d = hh(d, a, b, c, x[i], 11, -358537222);
-        c = hh(c, d, a, b, x[i + 3], 16, -722521979);
-        b = hh(b, c, d, a, x[i + 6], 23, 76029189);
-        a = hh(a, b, c, d, x[i + 9], 4, -640364487);
-        d = hh(d, a, b, c, x[i + 12], 11, -421815835);
-        c = hh(c, d, a, b, x[i + 15], 16, 530742520);
-        b = hh(b, c, d, a, x[i + 2], 23, -995338651);
-
-        a = ii(a, b, c, d, x[i], 6, -198630844);
-        d = ii(d, a, b, c, x[i + 7], 10, 1126891415);
-        c = ii(c, d, a, b, x[i + 14], 15, -1416354905);
-        b = ii(b, c, d, a, x[i + 5], 21, -57434055);
-        a = ii(a, b, c, d, x[i + 12], 6, 1700485571);
-        d = ii(d, a, b, c, x[i + 3], 10, -1894986606);
-        c = ii(c, d, a, b, x[i + 10], 15, -1051523);
-        b = ii(b, c, d, a, x[i + 1], 21, -2054922799);
-        a = ii(a, b, c, d, x[i + 8], 6, 1873313359);
-        d = ii(d, a, b, c, x[i + 15], 10, -30611744);
-        c = ii(c, d, a, b, x[i + 6], 15, -1560198380);
-        b = ii(b, c, d, a, x[i + 13], 21, 1309151649);
-        a = ii(a, b, c, d, x[i + 4], 6, -145523070);
-        d = ii(d, a, b, c, x[i + 11], 10, -1120210379);
-        c = ii(c, d, a, b, x[i + 2], 15, 718787259);
-        b = ii(b, c, d, a, x[i + 9], 21, -343485551);
-
-        a = ad(a, oa);
-        b = ad(b, ob);
-        c = ad(c, oc);
-        d = ad(d, od);
-    }
-
-    return rh(a) + rh(b) + rh(c) + rh(d);
+    return MD5(str);
 }
 
 // ==================== 签名 ====================

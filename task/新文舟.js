@@ -1,4 +1,3 @@
-```javascript
 /*
 [rewrite_local]
 #  QX Task
@@ -860,4 +859,3 @@ main()
         $done();
 
     });
-```

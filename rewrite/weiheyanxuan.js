@@ -31,7 +31,7 @@ try {
     // 修改
     data.positionSeconds = videoSeconds;
     data.watchedSeconds = videoSeconds;
-
+/*
     // QX 通知
     $notify(
         "视频进度修改成功",
@@ -42,7 +42,7 @@ try {
     console.log(
         `✅ 修改成功：videoSeconds=${videoSeconds}，positionSeconds=${oldPosition}→${videoSeconds}，watchedSeconds=${oldWatched}→${videoSeconds}`
     );
-
+*/
     $done({
         body: JSON.stringify(data)
     });

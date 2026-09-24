@@ -1,53 +1,22 @@
-/*
-========================================
-  修改视频进度参数
-  positionSeconds = videoSeconds
-  watchedSeconds  = videoSeconds
-========================================
-*/
+/**
+ * Quantumult X Rewrite Script: Save request data to persistent storage
+ */
 
-const body = $request.body;
+if ($request &&$request.url) {
+  const url = $request.url;
+  const headers = JSON.stringify($request.headers);
+  const body = $request.body || '';
 
-if (!body) {
-    console.log("❌ 未获取到请求体");
-    $done({});
+  // 拼接格式：URL#headers#body
+  const savedData = `${url}#${headers}#${body}`;
+
+  const success = $prefs.setValueForKey(savedData, 'weiheyanxuan');
+  if (success) {
+    console.log('[墨音商城] 成功提取并保存请求数据至 weiheyanxuan');
+    $notify('墨音商城', '请求数据提取成功', `已存入本地变量 weiheyanxuan`);
+  } else {
+    console.log('[墨音商城] 保存请求数据失败');
+  }
 }
 
-try {
-    const data = JSON.parse(body);
-
-    // 获取 videoSeconds
-    const videoSeconds = Number(data.videoSeconds);
-
-    if (!Number.isFinite(videoSeconds)) {
-        console.log("❌ 未找到有效的 videoSeconds");
-        $done({});
-    }
-
-    // 保存修改前的值
-    const oldPosition = data.positionSeconds;
-    const oldWatched = data.watchedSeconds;
-
-    // 修改
-    data.positionSeconds = videoSeconds;
-    data.watchedSeconds = videoSeconds;
-/*
-    // QX 通知
-    $notify(
-        "视频进度修改成功",
-        `videoSeconds：${videoSeconds}`,
-        `positionSeconds：${oldPosition} → ${videoSeconds}\nwatchedSeconds：${oldWatched} → ${videoSeconds}`
-    );
-
-    console.log(
-        `✅ 修改成功：videoSeconds=${videoSeconds}，positionSeconds=${oldPosition}→${videoSeconds}，watchedSeconds=${oldWatched}→${videoSeconds}`
-    );
-*/
-    $done({
-        body: JSON.stringify(data)
-    });
-
-} catch (e) {
-    console.log("❌ JSON解析失败：" + e);
-    $done({});
-}
+$done({});

@@ -7,7 +7,7 @@
  * 最终格式：
  * URL#Authorization
  *
- * 不写入本地变量
+ * ^https:\/\/abc\.yvfazqk\.cn\/api\/mp3\/video\.php\?(?=[^#]*\bc=[^&]*)(?=[^#]*\bd=[^&]*)(?=[^#]*\bq=[^&]*)[^#]*$
  */
 
 const url = $request.url;
